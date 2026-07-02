@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
-import { Check, PartyPopper, Share2, Undo2 } from 'lucide-react';
+import { Check, PartyPopper, Share2, Shuffle, Undo2 } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import ConfettiBurst from '../components/ConfettiBurst.jsx';
 import PlayerTotals from '../components/PlayerTotals.jsx';
@@ -8,12 +8,12 @@ import ScoreEntryForm from '../components/ScoreEntryForm.jsx';
 import ScorecardGrid from '../components/ScorecardGrid.jsx';
 import ShareResultButton from '../components/ShareResultButton.jsx';
 import { useFeedback } from '../hooks/useFeedback.js';
-import { TOTAL_ROUNDS, wildRankForRound } from '../lib/fiveCrowns.js';
+import { dealerForRound, TOTAL_ROUNDS, wildRankForRound } from '../lib/fiveCrowns.js';
 import { subscribeToGame, submitRoundScores, undoLastRound } from '../lib/games.js';
 import { vibrate } from '../lib/haptics.js';
 import { playGameComplete, playRoundComplete } from '../lib/sound.js';
 import { CURRENT_GAME_KEY } from '../lib/storageKeys.js';
-import { suitForIndex } from '../lib/suits.js';
+import { suitForIndex, suitForName } from '../lib/suits.js';
 
 export default function CurrentGame() {
   const { gameId: paramGameId } = useParams();
@@ -84,6 +84,9 @@ export default function CurrentGame() {
     : null;
   const roundSuit = suitForIndex(game.currentRound - 1);
   const progressPct = Math.round((game.currentRound - 1) / TOTAL_ROUNDS * 100);
+  const dealer = dealerForRound(game.currentRound, game.players);
+  const dealerSuit = suitForName(dealer.name);
+  const editingDealer = editingRound ? dealerForRound(editingRound, game.players) : null;
 
   async function handleCopyLink() {
     await navigator.clipboard.writeText(window.location.href);
@@ -137,8 +140,17 @@ export default function CurrentGame() {
             </h1>
           ) : (
             <div className="flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-                Round {game.currentRound} of {TOTAL_ROUNDS}
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                <span>
+                  Round {game.currentRound} of {TOTAL_ROUNDS}
+                </span>
+                <span aria-hidden="true" className="text-gray-300 dark:text-gray-700">
+                  ·
+                </span>
+                <span className={`flex items-center gap-1 ${dealerSuit.text}`}>
+                  <Shuffle size={12} />
+                  Dealer: <span className="normal-case">{dealer.name}</span>
+                </span>
               </p>
               <p className={`text-3xl font-extrabold ${roundSuit.text}`}>
                 Wild: {wildRankForRound(game.currentRound)}s
@@ -203,8 +215,14 @@ export default function CurrentGame() {
       {editingRound && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center">
           <div className="animate-pop-in max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl dark:bg-gray-900 sm:rounded-3xl">
-            <h2 className="mb-3 text-lg font-semibold">
-              Edit round {editingRound} · Wild: {wildRankForRound(editingRound)}s
+            <h2 className="mb-3 flex flex-wrap items-center gap-x-1.5 text-lg font-semibold">
+              <span>
+                Edit round {editingRound} · Wild: {wildRankForRound(editingRound)}s
+              </span>
+              <span className={`flex items-center gap-1 text-sm font-medium ${suitForName(editingDealer.name).text}`}>
+                <Shuffle size={12} />
+                Dealer: {editingDealer.name}
+              </span>
             </h2>
             <ScoreEntryForm
               players={game.players}
