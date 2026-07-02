@@ -28,7 +28,9 @@ export default function App() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-800">
-        <h1 className="text-lg font-bold">Five Crowns</h1>
+        <h1 className="text-lg font-bold">
+          Five Crowns <span className="text-xs font-normal text-gray-400 dark:text-gray-500">v{__APP_VERSION__}</span>
+        </h1>
         <button
           type="button"
           onClick={toggleTheme}

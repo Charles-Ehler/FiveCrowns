@@ -27,6 +27,30 @@ jobs:
 
       - run: npm ci
 
+      - name: Validate Firebase secrets
+        run: |
+          for var in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_DATABASE_URL \
+                     VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_STORAGE_BUCKET \
+                     VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID; do
+            value="${!var}"
+            if [ -z "$value" ]; then
+              echo "::error::Secret $var is empty or missing. Add it in Settings > Secrets and variables > Actions."
+              exit 1
+            fi
+            if [[ "$value" == "$var="* ]]; then
+              echo "::error::Secret $var's value still has '$var=' baked into it. Edit the secret so its value is only what comes after the '=' (e.g. not '$var=abc123', just 'abc123')."
+              exit 1
+            fi
+          done
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_DATABASE_URL: ${{ secrets.VITE_FIREBASE_DATABASE_URL }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
       - run: npm run build
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
