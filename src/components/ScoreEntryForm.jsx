@@ -17,10 +17,14 @@ function initialEntries(players, initialData) {
 export default function ScoreEntryForm({ players, initialData, submitLabel, onSubmit, onCancel }) {
   const [entries, setEntries] = useState(() => initialEntries(players, initialData));
 
-  const allValid = players.every((p) => {
+  const someoneWentOut = players.some((p) => entries[p.id].wentOut);
+  const scoresValid = players.every((p) => {
     const value = entries[p.id]?.score;
-    return value !== '' && Number.isInteger(Number(value)) && Number(value) >= 0;
+    // A blank score defaults to 0 at submit time, so it's not blocking — only
+    // a non-numeric or negative entry is.
+    return value === '' || (Number.isInteger(Number(value)) && Number(value) >= 0);
   });
+  const allValid = someoneWentOut && scoresValid;
 
   function updateScore(playerId, score) {
     setEntries((prev) => ({ ...prev, [playerId]: { ...prev[playerId], score } }));
@@ -28,14 +32,21 @@ export default function ScoreEntryForm({ players, initialData, submitLabel, onSu
 
   // Going out is always a 0-point round, and it's a common mis-tap to leave a
   // stale number in the box after toggling this on — so lock the field instead
-  // of just defaulting it, and hand control back with a clean slate if toggled off.
+  // of just defaulting it, and hand control back with a clean slate if toggled
+  // off. Only one player can go out per round, so turning it on for someone
+  // else clears whoever had it before.
   function toggleWentOut(playerId) {
     setEntries((prev) => {
-      const wentOut = !prev[playerId].wentOut;
-      return {
-        ...prev,
-        [playerId]: { score: wentOut ? '0' : '', wentOut },
-      };
+      const turningOn = !prev[playerId].wentOut;
+      const next = {};
+      players.forEach((p) => {
+        if (p.id === playerId) {
+          next[p.id] = { score: turningOn ? '0' : '', wentOut: turningOn };
+        } else {
+          next[p.id] = turningOn && prev[p.id].wentOut ? { score: '', wentOut: false } : prev[p.id];
+        }
+      });
+      return next;
     });
   }
 
@@ -44,8 +55,9 @@ export default function ScoreEntryForm({ players, initialData, submitLabel, onSu
     if (!allValid) return;
     const scoresByPlayerId = {};
     players.forEach((p) => {
+      const value = entries[p.id].score;
       scoresByPlayerId[p.id] = {
-        score: Number(entries[p.id].score),
+        score: value === '' ? 0 : Number(value),
         wentOut: entries[p.id].wentOut,
       };
     });
@@ -100,6 +112,12 @@ export default function ScoreEntryForm({ players, initialData, submitLabel, onSu
           </div>
         );
       })}
+
+      {!someoneWentOut && (
+        <p className="text-center text-xs font-medium text-amber-600 dark:text-amber-400">
+          Mark who went out this round to continue.
+        </p>
+      )}
 
       <div className="flex gap-3 pt-1">
         {onCancel && (
