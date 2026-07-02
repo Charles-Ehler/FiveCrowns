@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
-import { suitForIndex } from '../lib/suits.js';
+import { suitForName } from '../lib/suits.js';
 
 function initialEntries(players, initialData) {
   const entries = {};
@@ -14,8 +14,17 @@ function initialEntries(players, initialData) {
   return entries;
 }
 
-export default function ScoreEntryForm({ players, initialData, submitLabel, onSubmit, onCancel }) {
+export default function ScoreEntryForm({
+  players,
+  initialData,
+  submitLabel,
+  onSubmit,
+  onCancel,
+  roundNumber,
+  onDraftChange,
+}) {
   const [entries, setEntries] = useState(() => initialEntries(players, initialData));
+  const inputRefs = useRef({});
 
   const someoneWentOut = players.some((p) => entries[p.id].wentOut);
   const scoresValid = players.every((p) => {
@@ -25,6 +34,19 @@ export default function ScoreEntryForm({ players, initialData, submitLabel, onSu
     return value === '' || (Number.isInteger(Number(value)) && Number(value) >= 0);
   });
   const allValid = someoneWentOut && scoresValid;
+
+  // Live preview only — lets the parent show leader-delta totals updating as
+  // someone types, without writing anything until real submit.
+  useEffect(() => {
+    if (!onDraftChange || !roundNumber) return;
+    const scores = {};
+    players.forEach((p) => {
+      const value = entries[p.id].score;
+      scores[p.id] = { score: value === '' ? 0 : Number(value) || 0, wentOut: entries[p.id].wentOut };
+    });
+    onDraftChange({ roundNumber, scores });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries]);
 
   function updateScore(playerId, score) {
     setEntries((prev) => ({ ...prev, [playerId]: { ...prev[playerId], score } }));
@@ -50,6 +72,23 @@ export default function ScoreEntryForm({ players, initialData, submitLabel, onSu
     });
   }
 
+  function focusNextInput(index) {
+    for (let i = index + 1; i < players.length; i += 1) {
+      const nextPlayer = players[i];
+      if (entries[nextPlayer.id].wentOut) continue; // locked field, skip
+      inputRefs.current[nextPlayer.id]?.focus();
+      inputRefs.current[nextPlayer.id]?.select();
+      return;
+    }
+    inputRefs.current[players[index].id]?.blur();
+  }
+
+  function handleScoreKeyDown(e, index) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    focusNextInput(index);
+  }
+
   function handleSubmit(e) {
     e.preventDefault();
     if (!allValid) return;
@@ -67,7 +106,7 @@ export default function ScoreEntryForm({ players, initialData, submitLabel, onSu
   return (
     <form onSubmit={handleSubmit} className="space-y-2.5">
       {players.map((p, i) => {
-        const suit = suitForIndex(i);
+        const suit = suitForName(p.name);
         const wentOut = entries[p.id].wentOut;
         return (
           <div
@@ -94,13 +133,18 @@ export default function ScoreEntryForm({ players, initialData, submitLabel, onSu
               Went out
             </button>
             <input
+              ref={(el) => {
+                inputRefs.current[p.id] = el;
+              }}
               type="number"
               inputMode="numeric"
+              enterKeyHint="next"
               min="0"
               step="1"
               readOnly={wentOut}
               value={entries[p.id].score}
               onChange={(e) => updateScore(p.id, e.target.value)}
+              onKeyDown={(e) => handleScoreKeyDown(e, i)}
               placeholder="0"
               className={[
                 'w-16 shrink-0 rounded-xl border p-2.5 text-center text-2xl font-bold',

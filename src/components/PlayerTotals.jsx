@@ -1,20 +1,25 @@
 import { Crown } from 'lucide-react';
 import { computeTotals } from '../lib/fiveCrowns.js';
-import { suitForIndex } from '../lib/suits.js';
+import { suitForName } from '../lib/suits.js';
 
-export default function PlayerTotals({ players, rounds, winnerIds = [], complete = false }) {
-  const totals = computeTotals(players, rounds);
+// draftRound lets the caller preview totals with the in-progress (unsaved)
+// round's scores overlaid, so the leader delta updates live as someone types
+// — without writing anything early.
+export default function PlayerTotals({ players, rounds, winnerIds = [], complete = false, draftRound = null }) {
+  const previewRounds = draftRound ? [...rounds, draftRound] : rounds;
+  const totals = computeTotals(players, previewRounds);
   const sorted = [...players].sort((a, b) => totals[a.id] - totals[b.id]);
   const lowestTotal = sorted.length ? totals[sorted[0].id] : null;
-  const hasScores = rounds.length > 0;
+  const hasScores = previewRounds.length > 0;
 
   return (
     <ol className="space-y-2">
       {sorted.map((p, i) => {
-        const suit = suitForIndex(players.indexOf(p));
+        const suit = suitForName(p.name);
         const isWinner = winnerIds.includes(p.id);
         const isLeader = !complete && hasScores && totals[p.id] === lowestTotal;
         const highlighted = isWinner || isLeader;
+        const behindLeader = hasScores ? totals[p.id] - lowestTotal : 0;
         return (
           <li
             key={p.id}
@@ -43,7 +48,14 @@ export default function PlayerTotals({ players, rounds, winnerIds = [], complete
                 fill="currentColor"
               />
             )}
-            <span className="text-xl font-bold tabular-nums">{totals[p.id]}</span>
+            <span className="flex flex-col items-end">
+              <span className="text-xl font-bold tabular-nums">{totals[p.id]}</span>
+              {!highlighted && behindLeader > 0 && (
+                <span className="text-[11px] font-medium text-gray-400 dark:text-gray-500">
+                  +{behindLeader} behind
+                </span>
+              )}
+            </span>
           </li>
         );
       })}

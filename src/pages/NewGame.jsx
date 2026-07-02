@@ -3,18 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Plus, Sparkles, X } from 'lucide-react';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../lib/fiveCrowns.js';
 import { createGame, listRecentPlayerNames } from '../lib/games.js';
+import { formatRelativeDate } from '../lib/relativeDate.js';
 import { CURRENT_GAME_KEY } from '../lib/storageKeys.js';
-import { suitForIndex } from '../lib/suits.js';
+import { suitForIndex, suitForName } from '../lib/suits.js';
 
 export default function NewGame() {
   const [names, setNames] = useState(['', '']);
-  const [recentNames, setRecentNames] = useState([]);
+  const [recentPlayers, setRecentPlayers] = useState([]);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    listRecentPlayerNames().then(setRecentNames).catch(() => setRecentNames([]));
+    listRecentPlayerNames().then(setRecentPlayers).catch(() => setRecentPlayers([]));
   }, []);
 
   const trimmed = names.map((n) => n.trim());
@@ -80,8 +81,9 @@ export default function NewGame() {
     }
   }
 
-  const availableRecent = recentNames.filter(
-    (n) => !trimmed.some((t) => t.toLowerCase() === n.toLowerCase()),
+  // Already ordered most-recent-first by the Firestore query.
+  const availableRecent = recentPlayers.filter(
+    (r) => !trimmed.some((t) => t.toLowerCase() === r.name.toLowerCase()),
   );
 
   return (
@@ -96,7 +98,7 @@ export default function NewGame() {
 
       <div className="space-y-2.5">
         {names.map((name, i) => {
-          const suit = suitForIndex(i);
+          const suit = name.trim() ? suitForName(name) : suitForIndex(i);
           return (
             <div key={i} className="flex items-center gap-2">
               <span
@@ -157,14 +159,17 @@ export default function NewGame() {
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">Recent players</p>
           <div className="flex flex-wrap gap-2">
-            {availableRecent.map((name) => (
+            {availableRecent.map((r) => (
               <button
-                key={name}
+                key={r.name}
                 type="button"
-                onClick={() => addRecent(name)}
-                className="rounded-full bg-gray-100 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+                onClick={() => addRecent(r.name)}
+                className="rounded-full bg-gray-100 px-3 py-1.5 text-left text-sm font-medium transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
               >
-                {name}
+                {r.name}
+                {r.lastUsedAt && (
+                  <span className="ml-1.5 text-xs font-normal text-gray-400">{formatRelativeDate(r.lastUsedAt)}</span>
+                )}
               </button>
             ))}
           </div>

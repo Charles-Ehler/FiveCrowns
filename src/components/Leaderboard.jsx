@@ -1,5 +1,5 @@
 import { Crown } from 'lucide-react';
-import { suitForIndex } from '../lib/suits.js';
+import { suitForName } from '../lib/suits.js';
 
 const PODIUM_STYLE = [
   { order: 'order-2', pad: 'pt-0', ring: 'ring-amber-400', badge: 'bg-amber-400 text-amber-950', medal: '🥇' },
@@ -16,7 +16,7 @@ export default function Leaderboard({ players }) {
       <div className="flex items-end justify-center gap-3">
         {top3.map((p, i) => {
           const style = PODIUM_STYLE[i];
-          const suit = suitForIndex(players.indexOf(p));
+          const suit = suitForName(p.name);
           return (
             <div key={p.name} className={`flex ${style.pad} ${style.order} flex-col items-center`}>
               <div className="relative">

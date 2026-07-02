@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Clock3, ScrollText, Trash2, Trophy } from 'lucide-react';
+import { Clock3, Trash2, Trophy } from 'lucide-react';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import EmptyState from '../components/EmptyState.jsx';
 import { computeTotals } from '../lib/fiveCrowns.js';
 import { deleteGame, listGames } from '../lib/games.js';
-import { suitForIndex } from '../lib/suits.js';
+import { suitForName } from '../lib/suits.js';
 
 function formatDate(timestamp) {
   if (!timestamp?.toDate) return '';
@@ -37,12 +38,7 @@ export default function History() {
   }
 
   if (games.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-2 p-10 text-center text-gray-400 dark:text-gray-500">
-        <ScrollText size={32} />
-        <p>No games yet. Start one to see it here.</p>
-      </div>
-    );
+    return <EmptyState title="No games yet" message="Start one to see it show up here." />;
   }
 
   return (
@@ -60,8 +56,8 @@ export default function History() {
           >
             <NavLink to={`/history/${game.id}`} className="min-w-0 flex-1">
               <div className="mb-1 flex -space-x-2">
-                {game.players.slice(0, 5).map((p, i) => {
-                  const suit = suitForIndex(i);
+                {game.players.slice(0, 5).map((p) => {
+                  const suit = suitForName(p.name);
                   return (
                     <span
                       key={p.id}

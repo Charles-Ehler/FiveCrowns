@@ -125,5 +125,5 @@ export async function saveRecentPlayerName(name) {
 export async function listRecentPlayerNames() {
   const q = query(collection(db, PLAYERS_COLLECTION), orderBy('lastUsedAt', 'desc'));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data().name).slice(0, RECENT_PLAYERS_LIMIT);
+  return snap.docs.slice(0, RECENT_PLAYERS_LIMIT).map((d) => ({ name: d.data().name, lastUsedAt: d.data().lastUsedAt }));
 }

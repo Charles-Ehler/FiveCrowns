@@ -1,5 +1,5 @@
 import { TOTAL_ROUNDS, wildRankForRound } from '../lib/fiveCrowns.js';
-import { suitForIndex } from '../lib/suits.js';
+import { suitForName } from '../lib/suits.js';
 
 export default function ScorecardGrid({ players, rounds, onEditRound }) {
   const readOnly = !onEditRound;
@@ -13,8 +13,8 @@ export default function ScorecardGrid({ players, rounds, onEditRound }) {
             <th className="sticky left-0 bg-white p-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-400 dark:bg-gray-900 dark:text-gray-500">
               Round
             </th>
-            {players.map((p, i) => {
-              const suit = suitForIndex(i);
+            {players.map((p) => {
+              const suit = suitForName(p.name);
               return (
                 <th key={p.id} className="p-2.5 text-center font-semibold">
                   <span className="flex flex-col items-center gap-1">

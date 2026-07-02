@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  BarChart3,
   CloudRain,
   Flame,
   Frown,
   Gem,
   Medal,
+  Rocket,
   Swords,
+  Target,
   TrendingDown,
   TrendingUp,
   Trophy,
   Users,
+  Zap,
 } from 'lucide-react';
+import EmptyState from '../components/EmptyState.jsx';
 import Leaderboard from '../components/Leaderboard.jsx';
 import StatCard from '../components/StatCard.jsx';
 import WinBar from '../components/WinBar.jsx';
@@ -64,12 +67,7 @@ export default function Stats() {
   }
 
   if (stats.totalGames === 0) {
-    return (
-      <div className="flex flex-col items-center gap-2 p-10 text-center text-gray-400 dark:text-gray-500">
-        <BarChart3 size={32} />
-        <p>No stats yet — finish a game to see records here.</p>
-      </div>
-    );
+    return <EmptyState title="No stats yet" message="Finish a game to see records here." />;
   }
 
   const byWins = [...stats.players].sort((a, b) => b.wins - a.wins);
@@ -77,6 +75,9 @@ export default function Stats() {
   const byMostActive = [...stats.players].sort((a, b) => b.gamesPlayed - a.gamesPlayed)[0];
   const byHighestAvg = [...stats.players].sort((a, b) => b.average - a.average)[0];
   const byLowestAvg = [...stats.players].sort((a, b) => a.average - b.average)[0];
+  const byLongestStreak = [...stats.players].sort((a, b) => b.longestStreak - a.longestStreak)[0];
+  const activeStreaks = stats.players.filter((p) => p.currentStreak >= 2).sort((a, b) => b.currentStreak - a.currentStreak);
+  const nemeses = stats.players.filter((p) => p.nemesis);
   const showHeadToHead = stats.players.length === 2 && stats.headToHead.length === 1;
 
   return (
@@ -182,7 +183,70 @@ export default function Stats() {
           unit="games"
           playerName={byMostActive.name}
         />
+        {byLongestStreak.longestStreak > 0 && (
+          <StatCard
+            icon={Zap}
+            accent={ACCENT.amber}
+            label="Longest streak"
+            value={byLongestStreak.longestStreak}
+            unit="wins"
+            playerName={byLongestStreak.name}
+          />
+        )}
+        {stats.bestComeback && (
+          <StatCard
+            icon={Rocket}
+            accent={ACCENT.violet}
+            label="Biggest comeback"
+            value={stats.bestComeback.comebackSize}
+            unit="pts"
+            playerName={stats.bestComeback.playerName}
+            context={
+              <GameContext
+                gameId={stats.bestComeback.gameId}
+                createdAt={stats.bestComeback.createdAt}
+                extra={`Round ${stats.bestComeback.roundNumber} ·`}
+              />
+            }
+          />
+        )}
       </div>
+
+      {activeStreaks.length > 0 && (
+        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <Zap size={14} />
+            Current streaks
+          </p>
+          <ul className="space-y-1 text-sm">
+            {activeStreaks.map((p) => (
+              <li key={p.name} className="flex justify-between">
+                <span>{p.name}</span>
+                <span className="font-semibold">{p.currentStreak}-game win streak</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {nemeses.length > 0 && (
+        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <Target size={14} />
+            Nemesis
+          </p>
+          <ul className="space-y-1 text-sm">
+            {nemeses.map((p) => (
+              <li key={p.name} className="flex justify-between">
+                <span>{p.name}</span>
+                <span className="font-semibold">
+                  {p.nemesis.name} <span className="font-normal text-gray-400">({p.nemesis.count}x)</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {showHeadToHead && (
         <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
