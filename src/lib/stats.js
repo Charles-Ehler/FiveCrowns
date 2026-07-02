@@ -5,24 +5,21 @@ function playerKey(name) {
 }
 
 function emptyPlayerStat(name) {
-  return {
-    name,
-    gamesPlayed: 0,
-    wins: 0,
-    losses: 0,
-    gameTotals: [], // { total, gameId }
-    roundScores: [], // { score, gameId, roundNumber }
-  };
+  return { name, gamesPlayed: 0, wins: 0, losses: 0, gameTotals: [] };
 }
 
 // Only completed games count toward records; players are matched across
 // games by (trimmed, lowercased) name since player ids are per-game UUIDs.
+// Each "record" (bestGame, worstRound, etc.) is a single global stat with the
+// player/game/date attached, for the Stats page's leaderboard-style cards.
 export function computeStats(games) {
   const completed = games.filter((g) => g.status === 'complete');
   const perPlayer = new Map();
-  const headToHead = new Map(); // sorted pair key -> { names: [a,b], wins: {a:0,b:0}, games: 0 }
+  const headToHead = new Map(); // sorted pair key -> { names: [a,b], wins: {a,b}, games }
   let bestGame = null; // lowest total ever recorded
   let worstGame = null; // highest total ever recorded
+  let bestRound = null; // lowest single-round score ever recorded
+  let worstRound = null; // highest single-round score ever recorded
 
   for (const game of completed) {
     const totals = computeTotals(game.players, game.rounds);
@@ -37,31 +34,38 @@ export function computeStats(games) {
       const stat = perPlayer.get(key);
 
       stat.gamesPlayed += 1;
-      stat.gameTotals.push({ total: totals[p.id], gameId: game.id });
+      stat.gameTotals.push(totals[p.id]);
       if (game.winnerIds?.includes(p.id)) stat.wins += 1;
       if (isOutrightLoss && losers.includes(p)) stat.losses += 1;
 
       for (const round of game.rounds) {
         const entry = round.scores[p.id];
-        if (entry) {
-          stat.roundScores.push({ score: entry.score, gameId: game.id, roundNumber: round.roundNumber });
-        }
+        if (!entry) continue;
+        const roundRecord = {
+          playerName: p.name,
+          gameId: game.id,
+          createdAt: game.createdAt,
+          roundNumber: round.roundNumber,
+          score: entry.score,
+        };
+        if (!bestRound || roundRecord.score < bestRound.score) bestRound = roundRecord;
+        if (!worstRound || roundRecord.score > worstRound.score) worstRound = roundRecord;
       }
 
-      const record = { playerName: p.name, gameId: game.id, total: totals[p.id] };
-      if (!bestGame || record.total < bestGame.total) bestGame = record;
-      if (!worstGame || record.total > worstGame.total) worstGame = record;
+      const gameRecord = { playerName: p.name, gameId: game.id, createdAt: game.createdAt, total: totals[p.id] };
+      if (!bestGame || gameRecord.total < bestGame.total) bestGame = gameRecord;
+      if (!worstGame || gameRecord.total > worstGame.total) worstGame = gameRecord;
     }
 
     if (game.players.length === 2) {
       const [a, b] = game.players;
       const pairKey = [playerKey(a.name), playerKey(b.name)].sort().join('|');
       if (!headToHead.has(pairKey)) {
-        headToHead.set(pairKey, { names: [a.name, b.name], wins: { [a.id]: 0, [b.id]: 0 }, games: 0 });
+        headToHead.set(pairKey, { names: [a.name, b.name], wins: {}, games: 0 });
       }
       const h2h = headToHead.get(pairKey);
       h2h.games += 1;
-      // Re-key wins by name in case ids differ from a previous game between the same two people.
+      // Key wins by name (not id) since ids are per-game UUIDs.
       const winnerName = game.players.find((p) => game.winnerIds?.includes(p.id))?.name;
       if (winnerName) {
         h2h.wins[winnerName] = (h2h.wins[winnerName] ?? 0) + 1;
@@ -69,39 +73,13 @@ export function computeStats(games) {
     }
   }
 
-  const players = [...perPlayer.values()].map((stat) => {
-    const bestRound = stat.roundScores.reduce(
-      (min, r) => (min === null || r.score < min.score ? r : min),
-      null,
-    );
-    const worstRound = stat.roundScores.reduce(
-      (max, r) => (max === null || r.score > max.score ? r : max),
-      null,
-    );
-    const bestPlayerGame = stat.gameTotals.reduce(
-      (min, g) => (min === null || g.total < min.total ? g : min),
-      null,
-    );
-    const worstPlayerGame = stat.gameTotals.reduce(
-      (max, g) => (max === null || g.total > max.total ? g : max),
-      null,
-    );
-    const average = stat.gameTotals.length
-      ? stat.gameTotals.reduce((sum, g) => sum + g.total, 0) / stat.gameTotals.length
-      : 0;
-
-    return {
-      name: stat.name,
-      gamesPlayed: stat.gamesPlayed,
-      wins: stat.wins,
-      losses: stat.losses,
-      average,
-      bestRound,
-      worstRound,
-      bestGame: bestPlayerGame,
-      worstGame: worstPlayerGame,
-    };
-  });
+  const players = [...perPlayer.values()].map((stat) => ({
+    name: stat.name,
+    gamesPlayed: stat.gamesPlayed,
+    wins: stat.wins,
+    losses: stat.losses,
+    average: stat.gameTotals.length ? stat.gameTotals.reduce((sum, t) => sum + t, 0) / stat.gameTotals.length : 0,
+  }));
 
   const headToHeadList = [...headToHead.values()].map((h2h) => ({
     names: h2h.names,
@@ -113,6 +91,8 @@ export function computeStats(games) {
     players: players.sort((a, b) => b.gamesPlayed - a.gamesPlayed),
     bestGame,
     worstGame,
+    bestRound,
+    worstRound,
     headToHead: headToHeadList,
     totalGames: completed.length,
   };

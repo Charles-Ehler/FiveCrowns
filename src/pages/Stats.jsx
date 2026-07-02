@@ -1,22 +1,47 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import {
+  BarChart3,
+  CloudRain,
+  Flame,
+  Frown,
+  Gem,
+  Medal,
+  Swords,
+  TrendingDown,
+  TrendingUp,
+  Trophy,
+  Users,
+} from 'lucide-react';
+import Leaderboard from '../components/Leaderboard.jsx';
+import StatCard from '../components/StatCard.jsx';
+import WinBar from '../components/WinBar.jsx';
 import { listGames } from '../lib/games.js';
 import { computeStats } from '../lib/stats.js';
 
-function GameLink({ gameId, children }) {
-  return (
-    <NavLink to={`/history/${gameId}`} className="text-blue-600 dark:text-blue-400">
-      {children}
-    </NavLink>
-  );
+const ACCENT = {
+  amber: { soft: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-500' },
+  rose: { soft: 'bg-rose-50 dark:bg-rose-950/40', text: 'text-rose-500' },
+  emerald: { soft: 'bg-emerald-50 dark:bg-emerald-950/40', text: 'text-emerald-500' },
+  violet: { soft: 'bg-violet-50 dark:bg-violet-950/40', text: 'text-violet-500' },
+  indigo: { soft: 'bg-indigo-50 dark:bg-indigo-950/40', text: 'text-indigo-500' },
+  slate: { soft: 'bg-slate-100 dark:bg-slate-800/60', text: 'text-slate-500' },
+};
+
+function formatDate(timestamp) {
+  if (!timestamp?.toDate) return null;
+  return timestamp.toDate().toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function Section({ title, children }) {
+function GameContext({ gameId, createdAt, extra }) {
   return (
-    <section>
-      <h2 className="mb-2 text-sm font-semibold uppercase text-gray-400">{title}</h2>
-      {children}
-    </section>
+    <p className="flex items-center gap-1">
+      {extra && <span>{extra}</span>}
+      <NavLink to={`/history/${gameId}`} className="font-medium text-violet-600 dark:text-violet-400">
+        View game
+      </NavLink>
+      {formatDate(createdAt) && <span>· {formatDate(createdAt)}</span>}
+    </p>
   );
 }
 
@@ -39,126 +64,137 @@ export default function Stats() {
   }
 
   if (stats.totalGames === 0) {
-    return <div className="p-4 text-gray-500 dark:text-gray-400">No completed games yet.</div>;
+    return (
+      <div className="flex flex-col items-center gap-2 p-10 text-center text-gray-400 dark:text-gray-500">
+        <BarChart3 size={32} />
+        <p>No stats yet — finish a game to see records here.</p>
+      </div>
+    );
   }
 
   const byWins = [...stats.players].sort((a, b) => b.wins - a.wins);
-  const byLosses = [...stats.players].sort((a, b) => b.losses - a.losses);
+  const byLosses = [...stats.players].sort((a, b) => b.losses - a.losses)[0];
+  const byMostActive = [...stats.players].sort((a, b) => b.gamesPlayed - a.gamesPlayed)[0];
+  const byHighestAvg = [...stats.players].sort((a, b) => b.average - a.average)[0];
+  const byLowestAvg = [...stats.players].sort((a, b) => a.average - b.average)[0];
+  const showHeadToHead = stats.players.length === 2 && stats.headToHead.length === 1;
 
   return (
     <div className="space-y-6 p-4">
-      <h1 className="text-xl font-semibold">Stats</h1>
+      <h1 className="text-2xl font-extrabold">Stats</h1>
 
-      <Section title="Most wins">
-        <ol className="space-y-1">
-          {byWins.map((p) => (
-            <li key={p.name} className="flex justify-between">
-              <span>{p.name}</span>
-              <span className="font-medium">{p.wins}</span>
-            </li>
-          ))}
-        </ol>
-      </Section>
+      <section className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Leaderboard · wins</p>
+        <Leaderboard players={byWins} />
+      </section>
 
-      <Section title="Most losses (finished last)">
-        <ol className="space-y-1">
-          {byLosses.map((p) => (
-            <li key={p.name} className="flex justify-between">
-              <span>{p.name}</span>
-              <span className="font-medium">{p.losses}</span>
-            </li>
-          ))}
-        </ol>
-      </Section>
+      <WinBar
+        title="Average score comparison (lower is better)"
+        entries={[...stats.players].sort((a, b) => a.average - b.average).map((p) => ({ name: p.name, value: Math.round(p.average * 10) / 10 }))}
+      />
 
-      <Section title="Games played & average score">
-        <ol className="space-y-1">
-          {stats.players.map((p) => (
-            <li key={p.name} className="flex justify-between">
-              <span>{p.name}</span>
-              <span className="font-medium">
-                {p.gamesPlayed} games · avg {p.average.toFixed(1)}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </Section>
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard
+          icon={Trophy}
+          accent={ACCENT.amber}
+          label="Most wins"
+          value={byWins[0].wins}
+          playerName={byWins[0].name}
+        />
+        <StatCard
+          icon={Frown}
+          accent={ACCENT.rose}
+          label="Most losses"
+          value={byLosses.losses}
+          playerName={byLosses.name}
+        />
+        {stats.bestRound && (
+          <StatCard
+            icon={Gem}
+            accent={ACCENT.emerald}
+            label="Best round"
+            value={stats.bestRound.score}
+            playerName={stats.bestRound.playerName}
+            context={
+              <GameContext
+                gameId={stats.bestRound.gameId}
+                createdAt={stats.bestRound.createdAt}
+                extra={`Round ${stats.bestRound.roundNumber} ·`}
+              />
+            }
+          />
+        )}
+        {stats.worstRound && (
+          <StatCard
+            icon={Flame}
+            accent={ACCENT.rose}
+            label="Rough round"
+            value={stats.worstRound.score}
+            playerName={stats.worstRound.playerName}
+            context={
+              <GameContext
+                gameId={stats.worstRound.gameId}
+                createdAt={stats.worstRound.createdAt}
+                extra={`Round ${stats.worstRound.roundNumber} ·`}
+              />
+            }
+          />
+        )}
+        {stats.bestGame && (
+          <StatCard
+            icon={Medal}
+            accent={ACCENT.violet}
+            label="Best game"
+            value={stats.bestGame.total}
+            playerName={stats.bestGame.playerName}
+            context={<GameContext gameId={stats.bestGame.gameId} createdAt={stats.bestGame.createdAt} />}
+          />
+        )}
+        {stats.worstGame && (
+          <StatCard
+            icon={CloudRain}
+            accent={ACCENT.slate}
+            label="The struggle"
+            value={stats.worstGame.total}
+            playerName={stats.worstGame.playerName}
+            context={<GameContext gameId={stats.worstGame.gameId} createdAt={stats.worstGame.createdAt} />}
+          />
+        )}
+        <StatCard
+          icon={TrendingUp}
+          accent={ACCENT.amber}
+          label="Highest average"
+          value={byHighestAvg.average.toFixed(1)}
+          playerName={byHighestAvg.name}
+        />
+        <StatCard
+          icon={TrendingDown}
+          accent={ACCENT.emerald}
+          label="Lowest average"
+          value={byLowestAvg.average.toFixed(1)}
+          playerName={byLowestAvg.name}
+        />
+        <StatCard
+          icon={Users}
+          accent={ACCENT.indigo}
+          label="Most active"
+          value={byMostActive.gamesPlayed}
+          unit="games"
+          playerName={byMostActive.name}
+        />
+      </div>
 
-      <Section title="Best & worst single round, per player">
-        <ol className="space-y-2">
-          {stats.players.map((p) => (
-            <li key={p.name}>
-              <p className="font-medium">{p.name}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Best: {p.bestRound?.score ?? '–'}
-                {p.bestRound && (
-                  <>
-                    {' '}
-                    (round {p.bestRound.roundNumber}, <GameLink gameId={p.bestRound.gameId}>game</GameLink>)
-                  </>
-                )}
-                {' · '}
-                Worst: {p.worstRound?.score ?? '–'}
-                {p.worstRound && (
-                  <>
-                    {' '}
-                    (round {p.worstRound.roundNumber}, <GameLink gameId={p.worstRound.gameId}>game</GameLink>)
-                  </>
-                )}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </Section>
-
-      <Section title="Best & worst full game, per player">
-        <ol className="space-y-2">
-          {stats.players.map((p) => (
-            <li key={p.name}>
-              <p className="font-medium">{p.name}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Best: {p.bestGame?.total ?? '–'}
-                {p.bestGame && (
-                  <>
-                    {' '}
-                    (<GameLink gameId={p.bestGame.gameId}>game</GameLink>)
-                  </>
-                )}
-                {' · '}
-                Worst: {p.worstGame?.total ?? '–'}
-                {p.worstGame && (
-                  <>
-                    {' '}
-                    (<GameLink gameId={p.worstGame.gameId}>game</GameLink>)
-                  </>
-                )}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </Section>
-
-      <Section title="All-time full-game records">
-        <p className="text-sm">
-          Best full game: {stats.bestGame?.playerName} scored {stats.bestGame?.total} (
-          <GameLink gameId={stats.bestGame?.gameId}>game</GameLink>)
-        </p>
-        <p className="text-sm">
-          Worst full game: {stats.worstGame?.playerName} scored {stats.worstGame?.total} (
-          <GameLink gameId={stats.worstGame?.gameId}>game</GameLink>)
-        </p>
-      </Section>
-
-      {stats.headToHead.length > 0 && (
-        <Section title="Head-to-head (2-player games)">
-          <ol className="space-y-1">
-            {stats.headToHead.map((h2h) => (
-              <li key={h2h.names.join('|')}>
-                {h2h.wins.map((w) => `${w.name}: ${w.wins}`).join(' vs ')} ({h2h.games} games)
-              </li>
-            ))}
-          </ol>
-        </Section>
+      {showHeadToHead && (
+        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <Swords size={14} />
+            Head-to-head
+          </p>
+          <p className="text-lg font-bold">
+            {stats.headToHead[0].wins.map((w) => `${w.name} ${w.wins}`).join(' – ')}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{stats.headToHead[0].games} games played</p>
+        </section>
       )}
     </div>
   );
