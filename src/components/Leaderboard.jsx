@@ -32,6 +32,7 @@ export default function Leaderboard({ players }) {
                 <Crown size={12} />
                 {p.wins} {p.wins === 1 ? 'win' : 'wins'}
               </p>
+              <p className="text-[11px] text-gray-400">{p.gamesPlayed} games</p>
             </div>
           );
         })}
@@ -48,7 +49,10 @@ export default function Leaderboard({ players }) {
                 <span className="w-5 text-center font-semibold text-gray-400">{i + 4}</span>
                 {p.name}
               </span>
-              <span className="font-semibold">{p.wins} wins</span>
+              <span className="text-right">
+                <span className="font-semibold">{p.wins} wins</span>
+                <span className="ml-1.5 text-xs text-gray-400">· {p.gamesPlayed} games</span>
+              </span>
             </li>
           ))}
         </ol>

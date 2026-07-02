@@ -1,5 +1,5 @@
 import { Shuffle } from 'lucide-react';
-import { dealerForRound, TOTAL_ROUNDS, wildRankForRound } from '../lib/fiveCrowns.js';
+import { dealerForRound, TOTAL_ROUNDS, wildRankWordForRound } from '../lib/fiveCrowns.js';
 import { suitForName } from '../lib/suits.js';
 
 export default function ScorecardGrid({ players, rounds, onEditRound }) {
@@ -40,8 +40,8 @@ export default function ScorecardGrid({ players, rounds, onEditRound }) {
                 ].join(' ')}
               >
                 <td className="sticky left-0 bg-inherit p-2.5 text-gray-500 dark:text-gray-400">
-                  <span className="font-semibold text-gray-700 dark:text-gray-300">{roundNumber}</span>
-                  <span className="ml-1 text-xs">· {wildRankForRound(roundNumber)}s</span>
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">{wildRankWordForRound(roundNumber)}</span>
+                  <span className="ml-1 text-[10px] text-gray-400 dark:text-gray-500">R{roundNumber}</span>
                 </td>
                 {players.map((p) => {
                   const entry = round?.scores?.[p.id];

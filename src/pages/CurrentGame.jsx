@@ -8,7 +8,7 @@ import ScoreEntryForm from '../components/ScoreEntryForm.jsx';
 import ScorecardGrid from '../components/ScorecardGrid.jsx';
 import ShareResultButton from '../components/ShareResultButton.jsx';
 import { useFeedback } from '../hooks/useFeedback.js';
-import { dealerForRound, TOTAL_ROUNDS, wildRankForRound } from '../lib/fiveCrowns.js';
+import { dealerForRound, TOTAL_ROUNDS, wildRankWordForRound } from '../lib/fiveCrowns.js';
 import { subscribeToGame, submitRoundScores, undoLastRound } from '../lib/games.js';
 import { vibrate } from '../lib/haptics.js';
 import { playGameComplete, playRoundComplete } from '../lib/sound.js';
@@ -24,7 +24,6 @@ export default function CurrentGame() {
   const [editingRound, setEditingRound] = useState(null);
   const [confirmingUndo, setConfirmingUndo] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [toast, setToast] = useState(null);
   const [draftRound, setDraftRound] = useState(null);
 
   useEffect(() => {
@@ -41,12 +40,6 @@ export default function CurrentGame() {
     const unsubscribe = subscribeToGame(paramGameId, setGame, (err) => setError(err.message));
     return unsubscribe;
   }, [paramGameId]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 2200);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   if (!paramGameId) {
     return (
@@ -94,13 +87,6 @@ export default function CurrentGame() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function bestRoundMessage(scores) {
-    const lowest = Math.min(...game.players.map((p) => scores[p.id].score));
-    const best = game.players.filter((p) => scores[p.id].score === lowest);
-    const names = best.map((p) => p.name).join(' & ');
-    return `${names} ${best.length > 1 ? 'tied for' : 'had'} the best round (${lowest})`;
-  }
-
   async function handleMainSubmit(scores) {
     const round = game.currentRound;
     const isFinalRound = round === TOTAL_ROUNDS;
@@ -111,25 +97,10 @@ export default function CurrentGame() {
       if (isFinalRound) playGameComplete();
       else playRoundComplete();
     }
-
-    if (!isFinalRound) setToast(bestRoundMessage(scores));
   }
 
   return (
     <div className="relative space-y-4 p-4">
-      {toast && (
-        <div className="pointer-events-none fixed inset-x-0 top-4 z-40 flex justify-center px-4">
-          <button
-            type="button"
-            onClick={() => setToast(null)}
-            className="animate-pop-in pointer-events-auto flex items-center gap-1.5 rounded-full bg-emerald-500 px-4 py-2 text-center text-sm font-semibold text-white shadow-lg"
-          >
-            <Check size={16} className="shrink-0" />
-            {toast}
-          </button>
-        </div>
-      )}
-
       <div className="relative overflow-hidden rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         {isComplete && <ConfettiBurst />}
         <div className="relative flex items-center justify-between">
@@ -140,26 +111,23 @@ export default function CurrentGame() {
             </h1>
           ) : (
             <div className="flex-1">
-              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                <span>
+              <p className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wide ${dealerSuit.text}`}>
+                <Shuffle size={12} />
+                Dealer: <span className="normal-case">{dealer.name}</span>
+              </p>
+              <p className={`text-3xl font-extrabold uppercase ${roundSuit.text}`}>
+                {wildRankWordForRound(game.currentRound)}
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <div className="h-1.5 w-full max-w-[200px] overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${roundSuit.bg}`}
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <span className="shrink-0 text-[11px] font-medium text-gray-400 dark:text-gray-500">
                   Round {game.currentRound} of {TOTAL_ROUNDS}
                 </span>
-                <span aria-hidden="true" className="text-gray-300 dark:text-gray-700">
-                  ·
-                </span>
-                <span className={`flex items-center gap-1 ${dealerSuit.text}`}>
-                  <Shuffle size={12} />
-                  Dealer: <span className="normal-case">{dealer.name}</span>
-                </span>
-              </p>
-              <p className={`text-3xl font-extrabold ${roundSuit.text}`}>
-                Wild: {wildRankForRound(game.currentRound)}s
-              </p>
-              <div className="mt-2 h-1.5 w-full max-w-[200px] overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${roundSuit.bg}`}
-                  style={{ width: `${progressPct}%` }}
-                />
               </div>
             </div>
           )}
@@ -215,10 +183,8 @@ export default function CurrentGame() {
       {editingRound && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center">
           <div className="animate-pop-in max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl dark:bg-gray-900 sm:rounded-3xl">
-            <h2 className="mb-3 flex flex-wrap items-center gap-x-1.5 text-lg font-semibold">
-              <span>
-                Edit round {editingRound} · Wild: {wildRankForRound(editingRound)}s
-              </span>
+            <h2 className="mb-3 flex flex-wrap items-center gap-x-2 text-lg font-semibold">
+              <span>Edit {wildRankWordForRound(editingRound)}</span>
               <span className={`flex items-center gap-1 text-sm font-medium ${suitForName(editingDealer.name).text}`}>
                 <Shuffle size={12} />
                 Dealer: {editingDealer.name}

@@ -1,5 +1,8 @@
 import { computeTotals } from './fiveCrowns.js';
 
+const CLOSER_MIN_ROUNDS = 11; // roughly one full game's worth of rounds
+const IMPROVED_MIN_GAMES = 4; // need real history before "last 3 vs overall" means anything
+
 function playerKey(name) {
   return name.trim().toLowerCase();
 }
@@ -11,9 +14,14 @@ function emptyPlayerStat(name) {
     wins: 0,
     losses: 0,
     gameTotals: [],
-    beatenBy: new Map(), // opponentKey -> { name, count } — who won when this player didn't
-    timeline: [], // { createdAtMs, won } per game, for streak calculation
+    timeline: [], // { createdAtMs, won, total } — chronological, for streaks + most-improved
+    wentOutCount: 0,
+    roundsPlayed: 0,
   };
+}
+
+function pairKeyFor(nameA, nameB) {
+  return [playerKey(nameA), playerKey(nameB)].sort().join('|');
 }
 
 function timestampMs(ts) {
@@ -36,6 +44,17 @@ function computeStreaks(timeline) {
   return { longest, current };
 }
 
+// Positive = recent games are scoring lower (better) than this player's
+// overall average; null if there isn't enough history to mean anything.
+function computeImprovement(timeline) {
+  if (timeline.length < IMPROVED_MIN_GAMES) return null;
+  const sorted = [...timeline].sort((a, b) => a.createdAtMs - b.createdAtMs);
+  const overallAvg = sorted.reduce((sum, t) => sum + t.total, 0) / sorted.length;
+  const recent = sorted.slice(-3);
+  const recentAvg = recent.reduce((sum, t) => sum + t.total, 0) / recent.length;
+  return overallAvg - recentAvg;
+}
+
 // Only completed games count toward records; players are matched across
 // games by (trimmed, lowercased) name since player ids are per-game UUIDs.
 // Each "record" (bestGame, worstRound, etc.) is a single global stat with the
@@ -43,11 +62,11 @@ function computeStreaks(timeline) {
 export function computeStats(games) {
   const completed = games.filter((g) => g.status === 'complete');
   const perPlayer = new Map();
-  const headToHead = new Map(); // sorted pair key -> { names: [a,b], wins: {a,b}, games }
-  let bestGame = null; // lowest total ever recorded
-  let worstGame = null; // highest total ever recorded
-  let bestRound = null; // lowest single-round score ever recorded
-  let worstRound = null; // highest single-round score ever recorded
+  const pairStats = new Map(); // pairKey -> { names: [a,b], games, wins: {name: n}, matches: [] }
+  let bestGame = null;
+  let worstGame = null;
+  let bestRound = null;
+  let worstRound = null;
   // Biggest gap closed between a player's worst round (relative to the rest
   // of the table that round) and their final placement (relative to the
   // winner) — a rough but self-contained "comeback" measure.
@@ -79,23 +98,17 @@ export function computeStats(games) {
       const won = game.winnerIds?.includes(p.id) ?? false;
       stat.gamesPlayed += 1;
       stat.gameTotals.push(totals[p.id]);
-      stat.timeline.push({ createdAtMs, won });
+      stat.timeline.push({ createdAtMs, won, total: totals[p.id] });
       if (won) stat.wins += 1;
       if (isOutrightLoss && losers.includes(p)) stat.losses += 1;
-
-      if (!won) {
-        for (const w of winners) {
-          const oppKey = playerKey(w.name);
-          const existing = stat.beatenBy.get(oppKey) ?? { name: w.name, count: 0 };
-          existing.count += 1;
-          stat.beatenBy.set(oppKey, existing);
-        }
-      }
 
       let worstRoundGap = null;
       for (const round of game.rounds) {
         const entry = round.scores[p.id];
         if (!entry) continue;
+        stat.roundsPlayed += 1;
+        if (entry.wentOut) stat.wentOutCount += 1;
+
         const roundRecord = {
           playerName: p.name,
           gameId: game.id,
@@ -132,28 +145,49 @@ export function computeStats(games) {
       if (!worstGame || gameRecord.total > worstGame.total) worstGame = gameRecord;
     }
 
-    if (game.players.length === 2) {
-      const [a, b] = game.players;
-      const pairKey = [playerKey(a.name), playerKey(b.name)].sort().join('|');
-      if (!headToHead.has(pairKey)) {
-        headToHead.set(pairKey, { names: [a.name, b.name], wins: {}, games: 0 });
-      }
-      const h2h = headToHead.get(pairKey);
-      h2h.games += 1;
-      // Key wins by name (not id) since ids are per-game UUIDs.
-      const winnerName = game.players.find((p) => game.winnerIds?.includes(p.id))?.name;
-      if (winnerName) {
-        h2h.wins[winnerName] = (h2h.wins[winnerName] ?? 0) + 1;
+    // Pairwise record for every two players who shared this game — not just
+    // strict 2-player games — so nemesis/head-to-head work in group games too.
+    for (let i = 0; i < game.players.length; i += 1) {
+      for (let j = i + 1; j < game.players.length; j += 1) {
+        const a = game.players[i];
+        const b = game.players[j];
+        const key = pairKeyFor(a.name, b.name);
+        if (!pairStats.has(key)) {
+          pairStats.set(key, { names: [a.name, b.name], games: 0, wins: {}, matches: [] });
+        }
+        const pair = pairStats.get(key);
+        pair.games += 1;
+        const aWon = winners.some((w) => w.id === a.id);
+        const bWon = winners.some((w) => w.id === b.id);
+        let winnerName = null;
+        if (aWon && !bWon) {
+          pair.wins[a.name] = (pair.wins[a.name] ?? 0) + 1;
+          winnerName = a.name;
+        } else if (bWon && !aWon) {
+          pair.wins[b.name] = (pair.wins[b.name] ?? 0) + 1;
+          winnerName = b.name;
+        }
+        pair.matches.push({ gameId: game.id, createdAt: game.createdAt, winnerName });
       }
     }
   }
 
   const players = [...perPlayer.values()].map((stat) => {
     const { longest, current } = computeStreaks(stat.timeline);
+
     let nemesis = null;
-    for (const entry of stat.beatenBy.values()) {
-      if (!nemesis || entry.count > nemesis.count) nemesis = entry;
+    for (const pair of pairStats.values()) {
+      const idx = pair.names.findIndex((name) => playerKey(name) === playerKey(stat.name));
+      if (idx === -1) continue;
+      const me = pair.names[idx];
+      const opponent = pair.names[1 - idx];
+      const theirWins = pair.wins[opponent] ?? 0;
+      const myWins = pair.wins[me] ?? 0;
+      if (theirWins > 0 && (!nemesis || theirWins > nemesis.theirWins)) {
+        nemesis = { name: opponent, theirWins, myWins, games: pair.games };
+      }
     }
+
     return {
       name: stat.name,
       gamesPlayed: stat.gamesPlayed,
@@ -163,23 +197,42 @@ export function computeStats(games) {
       longestStreak: longest,
       currentStreak: current,
       nemesis,
+      improvement: computeImprovement(stat.timeline),
+      wentOutRate: stat.roundsPlayed >= CLOSER_MIN_ROUNDS ? stat.wentOutCount / stat.roundsPlayed : null,
     };
   });
 
-  const headToHeadList = [...headToHead.values()].map((h2h) => ({
-    names: h2h.names,
-    games: h2h.games,
-    wins: h2h.names.map((name) => ({ name, wins: h2h.wins[name] ?? 0 })),
-  }));
+  const mostImprovedCandidate = players
+    .filter((p) => p.improvement !== null && p.improvement > 0)
+    .sort((a, b) => b.improvement - a.improvement)[0];
+  const mostImproved = mostImprovedCandidate
+    ? { name: mostImprovedCandidate.name, improvement: mostImprovedCandidate.improvement }
+    : null;
+
+  const closerCandidate = players
+    .filter((p) => p.wentOutRate !== null && p.wentOutRate > 0)
+    .sort((a, b) => b.wentOutRate - a.wentOutRate)[0];
+  const closer = closerCandidate ? { name: closerCandidate.name, rate: closerCandidate.wentOutRate } : null;
+
+  const pairs = [...pairStats.values()]
+    .map((pair) => ({
+      names: pair.names,
+      games: pair.games,
+      wins: pair.names.map((name) => ({ name, wins: pair.wins[name] ?? 0 })),
+      matches: [...pair.matches].sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt)),
+    }))
+    .sort((a, b) => b.games - a.games);
 
   return {
     players: players.sort((a, b) => b.gamesPlayed - a.gamesPlayed),
+    pairs,
     bestGame,
     worstGame,
     bestRound,
     worstRound,
     bestComeback,
-    headToHead: headToHeadList,
+    mostImproved,
+    closer,
     totalGames: completed.length,
   };
 }

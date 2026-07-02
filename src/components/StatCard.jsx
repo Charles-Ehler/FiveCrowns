@@ -1,6 +1,6 @@
 export default function StatCard({ icon: Icon, label, accent, value, unit, playerName, context }) {
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-800 dark:bg-gray-900">
       <div className="flex items-center gap-2">
         <span className={`flex h-8 w-8 items-center justify-center rounded-full ${accent.soft}`}>
           <Icon size={16} className={accent.text} />
