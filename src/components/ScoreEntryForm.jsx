@@ -48,7 +48,8 @@ export default function ScoreEntryForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entries]);
 
-  function updateScore(playerId, score) {
+  function updateScore(playerId, rawValue) {
+    const score = rawValue.replace(/[^0-9]/g, '');
     setEntries((prev) => ({ ...prev, [playerId]: { ...prev[playerId], score } }));
   }
 
@@ -136,11 +137,10 @@ export default function ScoreEntryForm({
               ref={(el) => {
                 inputRefs.current[p.id] = el;
               }}
-              type="number"
+              type="text"
               inputMode="numeric"
+              pattern="[0-9]*"
               enterKeyHint="next"
-              min="0"
-              step="1"
               readOnly={wentOut}
               value={entries[p.id].score}
               onChange={(e) => updateScore(p.id, e.target.value)}
