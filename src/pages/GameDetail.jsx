@@ -55,6 +55,7 @@ export default function GameDetail() {
         rounds={game.rounds}
         winnerIds={game.winnerIds ?? []}
         complete={isComplete}
+        dealerRound={isComplete ? null : game.currentRound}
       />
       <ScorecardGrid players={game.players} rounds={game.rounds} />
     </div>

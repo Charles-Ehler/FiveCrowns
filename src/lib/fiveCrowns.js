@@ -45,3 +45,11 @@ export function sortPlayersByTotal(players, rounds) {
   const totals = computeTotals(players, rounds);
   return [...players].sort((a, b) => totals[a.id] - totals[b.id]);
 }
+
+// Dealer rotates one seat per round, derived from the round number and the
+// players array's fixed (locked-at-creation) order — same pattern as
+// wildRankForRound, no separate "dealer" field stored anywhere.
+export function dealerForRound(round, players) {
+  if (!players.length) return null;
+  return players[(round - 1) % players.length];
+}

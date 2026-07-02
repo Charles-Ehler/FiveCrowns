@@ -1,16 +1,26 @@
 import { Crown } from 'lucide-react';
-import { computeTotals } from '../lib/fiveCrowns.js';
+import DealerBadge from './DealerBadge.jsx';
+import { computeTotals, dealerForRound } from '../lib/fiveCrowns.js';
 import { suitForName } from '../lib/suits.js';
 
 // draftRound lets the caller preview totals with the in-progress (unsaved)
 // round's scores overlaid, so the leader delta updates live as someone types
-// — without writing anything early.
-export default function PlayerTotals({ players, rounds, winnerIds = [], complete = false, draftRound = null }) {
+// — without writing anything early. dealerRound is the round to show the
+// dealer marker for (omit/pass null once the game is complete).
+export default function PlayerTotals({
+  players,
+  rounds,
+  winnerIds = [],
+  complete = false,
+  draftRound = null,
+  dealerRound = null,
+}) {
   const previewRounds = draftRound ? [...rounds, draftRound] : rounds;
   const totals = computeTotals(players, previewRounds);
   const sorted = [...players].sort((a, b) => totals[a.id] - totals[b.id]);
   const lowestTotal = sorted.length ? totals[sorted[0].id] : null;
   const hasScores = previewRounds.length > 0;
+  const dealer = dealerRound ? dealerForRound(dealerRound, players) : null;
 
   return (
     <ol className="space-y-2">
@@ -41,6 +51,7 @@ export default function PlayerTotals({ players, rounds, winnerIds = [], complete
               {p.name.charAt(0).toUpperCase()}
             </span>
             <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
+            {dealer?.id === p.id && <DealerBadge playerName={p.name} iconOnly />}
             {highlighted && (
               <Crown
                 size={18}

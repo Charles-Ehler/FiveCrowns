@@ -168,6 +168,7 @@ export default function CurrentGame() {
         winnerIds={isComplete ? game.winnerIds : []}
         complete={isComplete}
         draftRound={isComplete ? null : draftRound}
+        dealerRound={isComplete ? null : game.currentRound}
       />
 
       {isComplete && <ShareResultButton game={game} />}
@@ -208,6 +209,7 @@ export default function CurrentGame() {
             <ScoreEntryForm
               players={game.players}
               initialData={editingRoundData}
+              roundNumber={editingRound}
               submitLabel="Save"
               onCancel={() => setEditingRound(null)}
               onSubmit={async (scores) => {

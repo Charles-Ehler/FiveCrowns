@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
+import DealerBadge from './DealerBadge.jsx';
+import { dealerForRound } from '../lib/fiveCrowns.js';
 import { suitForName } from '../lib/suits.js';
 
 function initialEntries(players, initialData) {
@@ -34,6 +36,7 @@ export default function ScoreEntryForm({
     return value === '' || (Number.isInteger(Number(value)) && Number(value) >= 0);
   });
   const allValid = someoneWentOut && scoresValid;
+  const dealer = roundNumber ? dealerForRound(roundNumber, players) : null;
 
   // Live preview only — lets the parent show leader-delta totals updating as
   // someone types, without writing anything until real submit.
@@ -120,6 +123,7 @@ export default function ScoreEntryForm({
               {p.name.charAt(0).toUpperCase()}
             </span>
             <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
+            {dealer?.id === p.id && <DealerBadge playerName={p.name} iconOnly />}
             <button
               type="button"
               onClick={() => toggleWentOut(p.id)}
