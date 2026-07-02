@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Dark mode is toggled by adding/removing the `dark` class on <html>,
+   rather than relying purely on prefers-color-scheme, so the in-app toggle works. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  overscroll-behavior-y: contain;
+}

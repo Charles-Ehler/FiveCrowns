@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Five Crowns Score Keeper: no auth, casual family game tool.
+    // Scoped to this app's two dedicated collections only, so nothing
+    // else in the tritip-taco-bar project is exposed by these rules.
+    match /fiveCrowns_games/{gameId} {
+      allow read, write: if true;
+    }
+
+    match /fiveCrowns_players/{playerId} {
+      allow read, write: if true;
+    }
+  }
+}
