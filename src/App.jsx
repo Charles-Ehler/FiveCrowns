@@ -6,6 +6,7 @@ import CurrentGame from './pages/CurrentGame.jsx';
 import History from './pages/History.jsx';
 import GameDetail from './pages/GameDetail.jsx';
 import Stats from './pages/Stats.jsx';
+import PlayerDetail from './pages/PlayerDetail.jsx';
 import { useDarkMode } from './hooks/useDarkMode.js';
 import { useFeedback } from './hooks/useFeedback.js';
 
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="/history" element={<History />} />
             <Route path="/history/:gameId" element={<GameDetail />} />
             <Route path="/stats" element={<Stats />} />
+            <Route path="/stats/:playerName" element={<PlayerDetail />} />
           </Routes>
         </div>
       </main>

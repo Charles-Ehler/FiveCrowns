@@ -3,7 +3,7 @@ import { computeTotals } from './fiveCrowns.js';
 const CLOSER_MIN_ROUNDS = 11; // roughly one full game's worth of rounds
 const IMPROVED_MIN_GAMES = 4; // need real history before "last 3 vs overall" means anything
 
-function playerKey(name) {
+export function playerKey(name) {
   return name.trim().toLowerCase();
 }
 
@@ -17,6 +17,11 @@ function emptyPlayerStat(name) {
     timeline: [], // { createdAtMs, won, total } — chronological, for streaks + most-improved
     wentOutCount: 0,
     roundsPlayed: 0,
+    bestRound: null,
+    worstRound: null,
+    bestGame: null,
+    worstGame: null,
+    history: [], // { gameId, createdAt, total, placement, won, opponentNames } — for the player detail page
   };
 }
 
@@ -118,6 +123,8 @@ export function computeStats(games) {
         };
         if (!bestRound || roundRecord.score < bestRound.score) bestRound = roundRecord;
         if (!worstRound || roundRecord.score > worstRound.score) worstRound = roundRecord;
+        if (!stat.bestRound || roundRecord.score < stat.bestRound.score) stat.bestRound = roundRecord;
+        if (!stat.worstRound || roundRecord.score > stat.worstRound.score) stat.worstRound = roundRecord;
 
         const roundMin = roundMinByNumber.get(round.roundNumber) ?? entry.score;
         const gap = entry.score - roundMin;
@@ -143,6 +150,18 @@ export function computeStats(games) {
       const gameRecord = { playerName: p.name, gameId: game.id, createdAt: game.createdAt, total: totals[p.id] };
       if (!bestGame || gameRecord.total < bestGame.total) bestGame = gameRecord;
       if (!worstGame || gameRecord.total > worstGame.total) worstGame = gameRecord;
+      if (!stat.bestGame || gameRecord.total < stat.bestGame.total) stat.bestGame = gameRecord;
+      if (!stat.worstGame || gameRecord.total > stat.worstGame.total) stat.worstGame = gameRecord;
+
+      const placement = 1 + game.players.filter((other) => totals[other.id] < totals[p.id]).length;
+      stat.history.push({
+        gameId: game.id,
+        createdAt: game.createdAt,
+        total: totals[p.id],
+        placement,
+        won,
+        opponentNames: game.players.filter((other) => other.id !== p.id).map((other) => other.name),
+      });
     }
 
     // Pairwise record for every two players who shared this game — not just
@@ -199,6 +218,11 @@ export function computeStats(games) {
       nemesis,
       improvement: computeImprovement(stat.timeline),
       wentOutRate: stat.roundsPlayed >= CLOSER_MIN_ROUNDS ? stat.wentOutCount / stat.roundsPlayed : null,
+      bestRound: stat.bestRound,
+      worstRound: stat.worstRound,
+      bestGame: stat.bestGame,
+      worstGame: stat.worstGame,
+      history: [...stat.history].sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt)),
     };
   });
 

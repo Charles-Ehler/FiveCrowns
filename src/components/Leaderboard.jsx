@@ -1,3 +1,4 @@
+import { NavLink } from 'react-router-dom';
 import { Crown } from 'lucide-react';
 import { suitForName } from '../lib/suits.js';
 
@@ -18,7 +19,11 @@ export default function Leaderboard({ players }) {
           const style = PODIUM_STYLE[i];
           const suit = suitForName(p.name);
           return (
-            <div key={p.name} className={`flex ${style.pad} ${style.order} flex-col items-center`}>
+            <NavLink
+              key={p.name}
+              to={`/stats/${encodeURIComponent(p.name)}`}
+              className={`flex ${style.pad} ${style.order} flex-col items-center rounded-xl p-1 transition-colors active:bg-gray-50 dark:active:bg-gray-800`}
+            >
               <div className="relative">
                 <span
                   className={`flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold text-white ring-4 ${style.ring} ${suit.bg}`}
@@ -33,7 +38,7 @@ export default function Leaderboard({ players }) {
                 {p.wins} {p.wins === 1 ? 'win' : 'wins'}
               </p>
               <p className="text-[11px] text-gray-400">{p.gamesPlayed} games</p>
-            </div>
+            </NavLink>
           );
         })}
       </div>
@@ -41,18 +46,20 @@ export default function Leaderboard({ players }) {
       {rest.length > 0 && (
         <ol className="mt-5 space-y-1.5">
           {rest.map((p, i) => (
-            <li
-              key={p.name}
-              className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-800 dark:bg-gray-900"
-            >
-              <span className="flex items-center gap-2">
-                <span className="w-5 text-center font-semibold text-gray-400">{i + 4}</span>
-                {p.name}
-              </span>
-              <span className="text-right">
-                <span className="font-semibold">{p.wins} wins</span>
-                <span className="ml-1.5 text-xs text-gray-400">· {p.gamesPlayed} games</span>
-              </span>
+            <li key={p.name}>
+              <NavLink
+                to={`/stats/${encodeURIComponent(p.name)}`}
+                className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="w-5 text-center font-semibold text-gray-400">{i + 4}</span>
+                  {p.name}
+                </span>
+                <span className="text-right">
+                  <span className="font-semibold">{p.wins} wins</span>
+                  <span className="ml-1.5 text-xs text-gray-400">· {p.gamesPlayed} games</span>
+                </span>
+              </NavLink>
             </li>
           ))}
         </ol>
