@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
-import { suitForName } from '../lib/suits.js';
+import Avatar from './Avatar.jsx';
 
 function initialEntries(players, initialData) {
   const entries = {};
@@ -107,18 +107,13 @@ export default function ScoreEntryForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-2.5">
       {players.map((p, i) => {
-        const suit = suitForName(p.name);
         const wentOut = entries[p.id].wentOut;
         return (
           <div
             key={p.id}
             className="flex min-h-[64px] items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900"
           >
-            <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${suit.bg}`}
-            >
-              {p.name.charAt(0).toUpperCase()}
-            </span>
+            <Avatar name={p.name} sizeClass="h-9 w-9 text-sm" />
             <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
             <button
               type="button"

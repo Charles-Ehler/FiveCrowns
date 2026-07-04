@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ChevronDown, Swords } from 'lucide-react';
-import { suitForName } from '../lib/suits.js';
+import Avatar from './Avatar.jsx';
 
 function formatDate(timestamp) {
   if (!timestamp?.toDate) return '';
@@ -12,8 +12,6 @@ function formatDate(timestamp) {
 export default function RivalryCard({ pair, featured = false }) {
   const [expanded, setExpanded] = useState(false);
   const [a, b] = pair.wins;
-  const suitA = suitForName(a.name);
-  const suitB = suitForName(b.name);
 
   return (
     <div
@@ -36,11 +34,7 @@ export default function RivalryCard({ pair, featured = false }) {
           )}
           <div className="flex items-center justify-center gap-3">
             <div className="flex flex-col items-center gap-1">
-              <span
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white ${suitA.bg}`}
-              >
-                {a.name.charAt(0).toUpperCase()}
-              </span>
+              <Avatar name={a.name} sizeClass="h-9 w-9 text-sm" />
               <span className="max-w-[5rem] truncate text-xs font-medium">{a.name}</span>
             </div>
             <span className="text-xl font-extrabold tabular-nums">
@@ -49,11 +43,7 @@ export default function RivalryCard({ pair, featured = false }) {
               {b.wins}
             </span>
             <div className="flex flex-col items-center gap-1">
-              <span
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white ${suitB.bg}`}
-              >
-                {b.name.charAt(0).toUpperCase()}
-              </span>
+              <Avatar name={b.name} sizeClass="h-9 w-9 text-sm" />
               <span className="max-w-[5rem] truncate text-xs font-medium">{b.name}</span>
             </div>
           </div>

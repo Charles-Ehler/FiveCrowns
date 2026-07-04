@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Plus, Sparkles, X } from 'lucide-react';
+import Avatar from '../components/Avatar.jsx';
 import { MAX_PLAYERS, MIN_PLAYERS } from '../lib/fiveCrowns.js';
 import { createGame, listRecentPlayerNames } from '../lib/games.js';
 import { formatRelativeDate } from '../lib/relativeDate.js';
 import { CURRENT_GAME_KEY } from '../lib/storageKeys.js';
-import { suitForIndex, suitForName } from '../lib/suits.js';
+import { suitForIndex } from '../lib/suits.js';
 
 export default function NewGame() {
   const [names, setNames] = useState(['', '']);
@@ -98,14 +99,17 @@ export default function NewGame() {
 
       <div className="space-y-2.5">
         {names.map((name, i) => {
-          const suit = name.trim() ? suitForName(name) : suitForIndex(i);
           return (
             <div key={i} className="flex items-center gap-2">
-              <span
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${suit.bg}`}
-              >
-                {name.trim() ? name.trim().charAt(0).toUpperCase() : i + 1}
-              </span>
+              {name.trim() ? (
+                <Avatar name={name} sizeClass="h-11 w-11 text-sm" />
+              ) : (
+                <span
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${suitForIndex(i).bg}`}
+                >
+                  {i + 1}
+                </span>
+              )}
               <input
                 type="text"
                 value={name}

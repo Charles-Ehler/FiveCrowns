@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { Crown } from 'lucide-react';
-import { suitForName } from '../lib/suits.js';
+import Avatar from './Avatar.jsx';
 
 const PODIUM_STYLE = [
   { order: 'order-2', pad: 'pt-0', ring: 'ring-amber-400', badge: 'bg-amber-400 text-amber-950', medal: '🥇' },
@@ -17,7 +17,6 @@ export default function Leaderboard({ players }) {
       <div className="flex items-end justify-center gap-3">
         {top3.map((p, i) => {
           const style = PODIUM_STYLE[i];
-          const suit = suitForName(p.name);
           return (
             <NavLink
               key={p.name}
@@ -25,11 +24,7 @@ export default function Leaderboard({ players }) {
               className={`flex ${style.pad} ${style.order} flex-col items-center rounded-xl p-1 transition-colors active:bg-gray-50 dark:active:bg-gray-800`}
             >
               <div className="relative">
-                <span
-                  className={`flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold text-white ring-4 ${style.ring} ${suit.bg}`}
-                >
-                  {p.name.charAt(0).toUpperCase()}
-                </span>
+                <Avatar name={p.name} sizeClass="h-14 w-14 text-lg" className={`ring-4 ${style.ring}`} />
                 <span className="absolute -bottom-1 -right-1 text-lg leading-none">{style.medal}</span>
               </div>
               <p className="mt-2 max-w-[5.5rem] truncate text-center text-sm font-semibold">{p.name}</p>

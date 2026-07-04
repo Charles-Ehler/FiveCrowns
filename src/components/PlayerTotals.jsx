@@ -1,7 +1,7 @@
 import { Crown } from 'lucide-react';
+import Avatar from './Avatar.jsx';
 import DealerBadge from './DealerBadge.jsx';
 import { computeTotals, dealerForRound } from '../lib/fiveCrowns.js';
-import { suitForName } from '../lib/suits.js';
 
 // draftRound lets the caller preview totals with the in-progress (unsaved)
 // round's scores overlaid, so the leader delta updates live as someone types
@@ -25,7 +25,6 @@ export default function PlayerTotals({
   return (
     <ol className="space-y-2">
       {sorted.map((p, i) => {
-        const suit = suitForName(p.name);
         const isWinner = winnerIds.includes(p.id);
         const isLeader = !complete && hasScores && totals[p.id] === lowestTotal;
         const highlighted = isWinner || isLeader;
@@ -45,11 +44,7 @@ export default function PlayerTotals({
             <span className="w-5 shrink-0 text-center text-sm font-semibold text-gray-400 dark:text-gray-500">
               {i + 1}
             </span>
-            <span
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${suit.bg}`}
-            >
-              {p.name.charAt(0).toUpperCase()}
-            </span>
+            <Avatar name={p.name} sizeClass="h-8 w-8 text-xs" />
             <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
             {dealer?.id === p.id && <DealerBadge playerName={p.name} iconOnly />}
             {highlighted && (

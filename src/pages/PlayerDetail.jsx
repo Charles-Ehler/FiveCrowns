@@ -1,24 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
+  Camera,
   CloudRain,
   Flag,
   Flame,
   Gem,
+  Loader2,
   Medal,
   Sparkles,
   Swords,
   Target,
   Trophy,
+  X,
   Zap,
 } from 'lucide-react';
+import Avatar from '../components/Avatar.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import RivalryCard from '../components/RivalryCard.jsx';
 import StatCard from '../components/StatCard.jsx';
+import { usePlayerPhoto } from '../contexts/PlayerPhotosContext.jsx';
 import { listGames } from '../lib/games.js';
+import { removePlayerPhoto, uploadPlayerPhoto } from '../lib/photos.js';
 import { computeStats, playerKey } from '../lib/stats.js';
-import { suitForName } from '../lib/suits.js';
 
 const ACCENT = {
   amber: { soft: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-500' },
@@ -49,12 +54,44 @@ export default function PlayerDetail() {
   const { playerName } = useParams();
   const [stats, setStats] = useState(undefined);
   const [error, setError] = useState(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState(null);
+  const fileInputRef = useRef(null);
+  const decodedName = decodeURIComponent(playerName);
+  const photoUrl = usePlayerPhoto(decodedName);
 
   useEffect(() => {
     listGames()
       .then((games) => setStats(computeStats(games)))
       .catch((err) => setError(err.message));
   }, []);
+
+  async function handlePhotoSelect(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow picking the same file again later
+    if (!file) return;
+    setPhotoBusy(true);
+    setPhotoError(null);
+    try {
+      await uploadPlayerPhoto(decodedName, file);
+    } catch (err) {
+      setPhotoError(err.message ?? 'Failed to upload photo');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function handlePhotoRemove() {
+    setPhotoBusy(true);
+    setPhotoError(null);
+    try {
+      await removePlayerPhoto(decodedName);
+    } catch (err) {
+      setPhotoError(err.message ?? 'Failed to remove photo');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   if (error) {
     return <div className="p-4 text-red-600 dark:text-red-400">Couldn't load stats: {error}</div>;
@@ -64,7 +101,6 @@ export default function PlayerDetail() {
     return <div className="p-4 text-gray-500 dark:text-gray-400">Loading…</div>;
   }
 
-  const decodedName = decodeURIComponent(playerName);
   const player = stats.players.find((p) => playerKey(p.name) === playerKey(decodedName));
 
   if (!player) {
@@ -79,7 +115,6 @@ export default function PlayerDetail() {
     );
   }
 
-  const suit = suitForName(player.name);
   const pairs = stats.pairs.filter((pair) => pair.names.some((n) => playerKey(n) === playerKey(player.name)));
   const winRate = player.gamesPlayed ? Math.round((player.wins / player.gamesPlayed) * 100) : 0;
 
@@ -91,16 +126,48 @@ export default function PlayerDetail() {
       </NavLink>
 
       <div className="flex items-center gap-4">
-        <span className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-2xl font-bold text-white ${suit.bg}`}>
-          {player.name.charAt(0).toUpperCase()}
-        </span>
-        <div className="min-w-0">
+        <div className="relative shrink-0">
+          <Avatar name={player.name} sizeClass="h-16 w-16 text-2xl" />
+          {photoBusy ? (
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+              <Loader2 size={20} className="animate-spin text-white" />
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label={photoUrl ? 'Change photo' : 'Add photo'}
+              className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-violet-600 text-white shadow-sm dark:border-gray-950"
+            >
+              <Camera size={13} />
+            </button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoSelect}
+            className="hidden"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-extrabold">{player.name}</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {player.gamesPlayed} {player.gamesPlayed === 1 ? 'game' : 'games'} played
           </p>
+          {photoUrl && !photoBusy && (
+            <button
+              type="button"
+              onClick={handlePhotoRemove}
+              className="mt-1 flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-red-500"
+            >
+              <X size={12} />
+              Remove photo
+            </button>
+          )}
         </div>
       </div>
+      {photoError && <p className="text-sm text-red-600 dark:text-red-400">{photoError}</p>}
 
       <div className="grid grid-cols-3 divide-x divide-gray-200 rounded-2xl border border-gray-200 bg-white shadow-sm dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
         <div className="flex flex-col items-center gap-0.5 p-3">

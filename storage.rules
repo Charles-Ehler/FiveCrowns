@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Five Crowns Score Keeper: no auth, casual family game tool.
+    // Scoped to this app's one path only, so nothing else in the
+    // tritip-taco-bar project's Storage bucket is exposed by these rules.
+    // Size/content-type guard applies to create/update only — request.resource
+    // doesn't exist on delete, so a plain "write" rule referencing it denies
+    // every delete with storage/unauthorized. Delete is left open, matching
+    // the public-write intent for this no-auth path.
+    match /fiveCrowns_playerPhotos/{fileName} {
+      allow read: if true;
+      allow create, update: if request.resource.size < 2 * 1024 * 1024
+                             && request.resource.contentType.matches('image/.*');
+      allow delete: if true;
+    }
+  }
+}

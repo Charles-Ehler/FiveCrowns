@@ -7,6 +7,7 @@ import History from './pages/History.jsx';
 import GameDetail from './pages/GameDetail.jsx';
 import Stats from './pages/Stats.jsx';
 import PlayerDetail from './pages/PlayerDetail.jsx';
+import { PlayerPhotosProvider } from './contexts/PlayerPhotosContext.jsx';
 import { useDarkMode } from './hooks/useDarkMode.js';
 import { useFeedback } from './hooks/useFeedback.js';
 
@@ -16,6 +17,7 @@ export default function App() {
   const location = useLocation();
 
   return (
+    <PlayerPhotosProvider>
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-950">
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur dark:border-gray-800 dark:bg-gray-950/90">
         <h1 className="flex items-baseline gap-1.5 text-lg font-extrabold tracking-tight">
@@ -61,5 +63,6 @@ export default function App() {
 
       <BottomNav />
     </div>
+    </PlayerPhotosProvider>
   );
 }

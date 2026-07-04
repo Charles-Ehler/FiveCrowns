@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Clock3, Trash2, Trophy } from 'lucide-react';
+import Avatar from '../components/Avatar.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import { computeTotals } from '../lib/fiveCrowns.js';
 import { deleteGame, listGames } from '../lib/games.js';
-import { suitForName } from '../lib/suits.js';
 
 function formatDate(timestamp) {
   if (!timestamp?.toDate) return '';
@@ -56,17 +56,14 @@ export default function History() {
           >
             <NavLink to={`/history/${game.id}`} className="min-w-0 flex-1">
               <div className="mb-1 flex -space-x-2">
-                {game.players.slice(0, 5).map((p) => {
-                  const suit = suitForName(p.name);
-                  return (
-                    <span
-                      key={p.id}
-                      className={`flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white dark:border-gray-900 ${suit.bg}`}
-                    >
-                      {p.name.charAt(0).toUpperCase()}
-                    </span>
-                  );
-                })}
+                {game.players.slice(0, 5).map((p) => (
+                  <Avatar
+                    key={p.id}
+                    name={p.name}
+                    sizeClass="h-6 w-6 text-[10px]"
+                    className="border-2 border-white dark:border-gray-900"
+                  />
+                ))}
               </div>
               <p className="truncate font-semibold">{game.players.map((p) => p.name).join(', ')}</p>
               <p className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
