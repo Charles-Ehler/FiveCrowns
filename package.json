@@ -1,6 +1,6 @@
 {
   "name": "fivecrowns",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -28,6 +28,7 @@
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-easy-crop": "^6.1.0",
     "react-router-dom": "^7.18.1"
   },
   "devDependencies": {

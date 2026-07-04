@@ -18,9 +18,11 @@ import {
 } from 'lucide-react';
 import Avatar from '../components/Avatar.jsx';
 import EmptyState from '../components/EmptyState.jsx';
+import PhotoCropModal from '../components/PhotoCropModal.jsx';
 import RivalryCard from '../components/RivalryCard.jsx';
 import StatCard from '../components/StatCard.jsx';
 import { usePlayerPhoto } from '../contexts/PlayerPhotosContext.jsx';
+import { getCroppedImageBlob } from '../lib/imageCrop.js';
 import { listGames } from '../lib/games.js';
 import { removePlayerPhoto, uploadPlayerPhoto } from '../lib/photos.js';
 import { computeStats, playerKey } from '../lib/stats.js';
@@ -56,6 +58,7 @@ export default function PlayerDetail() {
   const [error, setError] = useState(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState(null);
+  const [cropImageSrc, setCropImageSrc] = useState(null);
   const fileInputRef = useRef(null);
   const decodedName = decodeURIComponent(playerName);
   const photoUrl = usePlayerPhoto(decodedName);
@@ -66,17 +69,31 @@ export default function PlayerDetail() {
       .catch((err) => setError(err.message));
   }, []);
 
-  async function handlePhotoSelect(e) {
+  function handlePhotoSelect(e) {
     const file = e.target.files?.[0];
     e.target.value = ''; // allow picking the same file again later
     if (!file) return;
+    setPhotoError(null);
+    setCropImageSrc(URL.createObjectURL(file));
+  }
+
+  function handleCropCancel() {
+    URL.revokeObjectURL(cropImageSrc);
+    setCropImageSrc(null);
+  }
+
+  async function handleCropConfirm(croppedAreaPixels) {
+    const src = cropImageSrc;
     setPhotoBusy(true);
     setPhotoError(null);
     try {
-      await uploadPlayerPhoto(decodedName, file);
+      const croppedBlob = await getCroppedImageBlob(src, croppedAreaPixels);
+      await uploadPlayerPhoto(decodedName, croppedBlob);
     } catch (err) {
       setPhotoError(err.message ?? 'Failed to upload photo');
     } finally {
+      URL.revokeObjectURL(src);
+      setCropImageSrc(null);
       setPhotoBusy(false);
     }
   }
@@ -344,6 +361,10 @@ export default function PlayerDetail() {
           ))}
         </ul>
       </section>
+
+      {cropImageSrc && (
+        <PhotoCropModal imageSrc={cropImageSrc} onCancel={handleCropCancel} onConfirm={handleCropConfirm} />
+      )}
     </div>
   );
 }
